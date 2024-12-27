@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"time"
 	"user-auth-service/models"
 	"user-auth-service/services"
 
@@ -35,24 +34,31 @@ func main() {
 
 	// Initialize Gin router
 	router := gin.Default()
-	corsConfig := cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // Allow Nuxt frontend
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour, // CORS max age
-	}
-	router.Use(cors.New(corsConfig))
+	router.Use(cors.Default())
+	// corsConfig := cors.Config{
+	// 	AllowOrigins:     []string{"http://localhost:3000"}, // Allow Nuxt frontend
+	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+	// 	ExposeHeaders:    []string{"Content-Length"},
+	// 	AllowCredentials: true,
+	// 	MaxAge:           12 * time.Hour, // CORS max age
+	// }
+	// router.Use(cors.New(corsConfig))
 	// Set up CORS middleware
 
 	// Register and login routes
-	router.GET("/asd/", func(c *gin.Context) {
-		c.String(200, "hello cors")
-	})
-	router.POST("/register", registerHandler)
-	router.POST("/login", loginHandler)
 
+	// router.POST("/register", registerHandler)
+	// router.POST("/login", loginHandler)
+	router.POST("/register", func(c *gin.Context) {
+		// Handle registration
+		c.JSON(http.StatusOK, gin.H{"message": "User registered!"})
+	})
+
+	router.POST("/login", func(c *gin.Context) {
+		// Handle login
+		c.JSON(http.StatusOK, gin.H{"message": "Login successful!"})
+	})
 	// Start server
 	router.Run(":8080")
 }
