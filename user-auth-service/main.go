@@ -3,22 +3,19 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
+	"user-auth-service/middleware"
 	"user-auth-service/models"
 	"user-auth-service/services"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	// "github.com/itsjamie/gin-cors"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
-
-// func enableCors(w *http.ResponseWriter) {
-// 	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
-// }
 
 func main() {
 	// Initialize database connection
@@ -34,37 +31,35 @@ func main() {
 
 	// Initialize Gin router
 	router := gin.Default()
-	router.Use(cors.Default())
-	// corsConfig := cors.Config{
-	// 	AllowOrigins:     []string{"http://localhost:3000"}, // Allow Nuxt frontend
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// 	MaxAge:           12 * time.Hour, // CORS max age
-	// }
-	// router.Use(cors.New(corsConfig))
-	// Set up CORS middleware
 
-	// Register and login routes
+	// CORS configuration
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"}, // Allow Nuxt frontend
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour, // CORS max age
+	}
+	router.Use(cors.New(corsConfig)) // Set up CORS middleware
 
-	// router.POST("/register", registerHandler)
-	// router.POST("/login", loginHandler)
-	router.POST("/register", func(c *gin.Context) {
-		// Handle registration
-		c.JSON(http.StatusOK, gin.H{"message": "User registered!"})
-	})
+	// Register routes
+	router.POST("/register", registerHandler)
+	router.POST("/login", loginHandler)
+	router.GET("/users", getUsersHandler)
 
-	router.POST("/login", func(c *gin.Context) {
-		// Handle login
-		c.JSON(http.StatusOK, gin.H{"message": "Login successful!"})
-	})
+	// Use the middleware for protected routes
+	protected := router.Group("/")
+	protected.Use(middleware.TokenValidationMiddleware(DB))
+	{
+		protected.GET("/protected", protectedHandler) // Add your protected routes here
+	}
+
 	// Start server
 	router.Run(":8080")
 }
 
 func registerHandler(c *gin.Context) {
-	// enableCors(&w)
 	// Debugging line
 	fmt.Println("Received registration request")
 
@@ -104,8 +99,6 @@ func registerHandler(c *gin.Context) {
 
 func loginHandler(c *gin.Context) {
 	// Debugging line
-	// w :=
-	// 	enableCors(&w)
 	fmt.Println("Received login request")
 
 	var req struct {
@@ -133,5 +126,26 @@ func loginHandler(c *gin.Context) {
 			"email":    user.Email,
 		},
 		"token": token,
+	})
+}
+
+func getUsersHandler(c *gin.Context) {
+	// Fetch all users from the database
+	var users []models.User
+	if err := DB.Find(&users).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch users"})
+		return
+	}
+
+	// Return the list of users
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+	})
+}
+
+func protectedHandler(c *gin.Context) {
+	// This is a protected route, only accessible after token validation
+	c.JSON(http.StatusOK, gin.H{
+		"message": "This is a protected route",
 	})
 }
